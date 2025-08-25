@@ -2,14 +2,11 @@
 <html lang="en" data-theme="dark">
   <head>
     <meta charset="utf-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, viewport-fit=cover"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>FSTM — Fireside Tier Maker</title>
     <link rel="stylesheet" href="style.css" />
 
-    <!-- SortableJS: smooth, touch-friendly drag with no jitter -->
+    <!-- SortableJS: smooth, touch-friendly drag on desktop + iPad + Android -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js" defer></script>
     <!-- html-to-image: consistent PNG capture across devices -->
     <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.min.js" defer></script>
@@ -27,29 +24,6 @@
           <span class="brand-sub">Fireside Tier Maker</span>
         </div>
       </div>
-
-      <nav class="quick-actions" aria-label="Global actions">
-        <button id="btn-add-tier" class="icon-btn" aria-label="Add a tier" title="Add a tier">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg>
-        </button>
-
-        <button id="btn-undo" class="icon-btn" aria-label="Undo" title="Undo last action" disabled>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5V2L7 7l5 5V8c3.3 0 6 2.7 6 6a6 6 0 0 1-9.7 4.7l-1.2 1.6A8 8 0 0 0 20 14c0-4.4-3.6-8-8-8z"/></svg>
-        </button>
-
-        <button id="btn-save" class="icon-btn" aria-label="Save as PNG" title="Save as PNG">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20h14v-8h-4v4H9v-4H5v8zM19 9l-7-7-7 7h4v4h6V9h4z"/></svg>
-        </button>
-
-        <button id="btn-clear" class="icon-btn" aria-label="Clear the board" title="Clear the board">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7h12l-1 14H7L6 7zm10.5-4l1 2H6.5l1-2H16.5z"/></svg>
-        </button>
-
-        <button id="btn-theme" class="icon-btn" aria-label="Toggle theme" title="Toggle dark / light">
-          <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.76 4.84l-1.8-1.79L3.17 4.84l1.79 1.79 1.8-1.79zM1 13h3v-2H1v2zm10 10h2v-3h-2v3zm9.83-18.16l-1.79-1.79-1.79 1.79 1.79 1.79 1.79-1.79zM20 13h3v-2h-3v2zM6.76 19.16l-1.8 1.79 1.79 1.79 1.8-1.79-1.79-1.79zM17.24 19.16l1.79 1.79 1.79-1.79-1.79-1.79-1.79 1.79zM12 6a6 6 0 100 12 6 6 0 000-12z"/></svg>
-          <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
-        </button>
-      </nav>
     </header>
 
     <main>
@@ -93,22 +67,24 @@
         </div>
       </section>
 
-      <!-- HELP -->
+      <!-- HELP (always visible + device-specific blurb) -->
       <section class="help panel" aria-labelledby="help-title">
         <div class="panel-header">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10a10 10 0 100-20zm0 4a4 4 0 00-4 4h2a2 2 0 114 0c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5a4 4 0 00-4-4z"/></svg>
           <h2 id="help-title">Help</h2>
         </div>
-        <details>
-          <summary>Tips for your device</summary>
-          <ul>
+        <div id="help-body">
+          <p class="device-tag" id="device-tag">You’re on: …</p>
+          <ul class="help-list">
+            <li><strong>Edit labels:</strong> tap the big S/A/B/C/D letters to edit. The text auto-shrinks to fit. </li>
+            <li><strong>Delete a row:</strong> use the small × in the label. Undo will restore it.</li>
             <li><strong>Desktop / iPad:</strong> drag circles between rows and storage. Reorder within a row by dragging anywhere; items animate into place.</li>
-            <li><strong>Phones:</strong> tap a circle in storage to open the half-radial picker. Tap a tier letter to place it instantly. You can still drag to reorder within a row.</li>
-            <li><strong>Undo:</strong> every change goes into the stack. Tap Undo to step back one by one.</li>
-            <li><strong>PNG:</strong> “Save as PNG” captures the full board and title exactly as seen.</li>
+            <li><strong>Phones:</strong> tap a circle in storage to open the half-radial picker. Tap a tier to place it. Tap outside to close.</li>
+            <li><strong>Undo:</strong> every change is undoable.</li>
+            <li><strong>PNG:</strong> “Save as PNG” captures the full board (and the title only if you added one).</li>
             <li><strong>Autosave:</strong> your work is stored locally. Use “Hard Reset” inside Clear to wipe it clean.</li>
           </ul>
-        </details>
+        </div>
       </section>
 
       <!-- Capture wrapper: title + board -->
@@ -128,7 +104,7 @@
         </section>
       </section>
 
-      <!-- Action Bar (duplicated in header for reachability) -->
+      <!-- Action Bar (only here; removed from header) -->
       <section class="toolbar" aria-label="Board actions">
         <button id="btn-add-tier-2" class="btn">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg>
@@ -178,9 +154,5 @@
         </div>
       </form>
     </dialog>
-
-    <footer class="site-footer" aria-label="Footer">
-      <small>Built for you with care. Tip: long-press a circle on phones to open its actions.</small>
-    </footer>
   </body>
 </html>
