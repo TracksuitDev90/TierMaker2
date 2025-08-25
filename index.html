@@ -2,7 +2,10 @@
 <html lang="en" data-theme="dark">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
     <title>FSTM — Fireside Tier Maker</title>
     <link rel="stylesheet" href="style.css" />
 
@@ -13,25 +16,27 @@
     <script src="script.js" defer></script>
   </head>
   <body>
-    <header class="site-header" aria-label="FSTM header">
+    <header class="site-header" aria-label="Header">
       <div class="brand">
-        <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 2c3.5 3.4 4.5 6.3 3 8.7-1 1.6-3 2.3-3 5.3 0-.5-1.6-1.7-2.6-3.3C7.8 10.2 9 7.5 12 2z"></path>
-          <circle cx="12" cy="19" r="3"></circle>
-        </svg>
-        <div class="brand-text">
-          <strong class="brand-name">FSTM</strong>
-          <span class="brand-sub">Fireside Tier Maker</span>
-        </div>
+        <!-- Icon removed by request -->
+        <strong class="brand-name" aria-label="FSTM brand">FSTM</strong>
       </div>
+      <!-- Help chip (collapsed by default) -->
+      <details class="help-chip" aria-label="Help">
+        <summary>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10a10 10 0 100-20zm0 4a4 4 0 00-4 4h2a2 2 0 114 0c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5a4 4 0 00-4-4z"/></svg>
+          Help
+        </summary>
+        <div id="help-body" class="help-body"></div>
+      </details>
     </header>
 
     <main>
-      <!-- CUSTOM ITEMS group -->
+      <!-- CUSTOM ITEMS -->
       <section class="panel-group" aria-labelledby="custom-items-heading">
         <h2 id="custom-items-heading" class="panel-title">CUSTOM ITEMS</h2>
         <div class="panel-grid">
-          <!-- Circle Creator -->
+          <!-- Circle Creator (ephemeral; not saved across refresh) -->
           <section class="panel" aria-labelledby="creator-heading">
             <div class="panel-header">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/></svg>
@@ -44,7 +49,7 @@
               </label>
               <label class="field">
                 <span>Circle color</span>
-                <input id="cc-color" type="color" value="#7C9EFF" />
+                <input id="cc-color" type="color" value="#a5d6ff" />
               </label>
               <button id="cc-add" class="btn" type="submit" aria-label="Add custom circle">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg>
@@ -67,66 +72,42 @@
         </div>
       </section>
 
-      <!-- HELP (always visible + device-specific blurb) -->
-      <section class="help panel" aria-labelledby="help-title">
-        <div class="panel-header">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10a10 10 0 100-20zm0 4a4 4 0 00-4 4h2a2 2 0 114 0c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5a4 4 0 00-4-4z"/></svg>
-          <h2 id="help-title">Help</h2>
-        </div>
-        <div id="help-body">
-          <p class="device-tag" id="device-tag">You’re on: …</p>
-          <ul class="help-list">
-            <li><strong>Edit labels:</strong> tap the big S/A/B/C/D letters to edit. The text auto-shrinks to fit. </li>
-            <li><strong>Delete a row:</strong> use the small × in the label. Undo will restore it.</li>
-            <li><strong>Desktop / iPad:</strong> drag circles between rows and storage. Reorder within a row by dragging anywhere; items animate into place.</li>
-            <li><strong>Phones:</strong> tap a circle in storage to open the half-radial picker. Tap a tier to place it. Tap outside to close.</li>
-            <li><strong>Undo:</strong> every change is undoable.</li>
-            <li><strong>PNG:</strong> “Save as PNG” captures the full board (and the title only if you added one).</li>
-            <li><strong>Autosave:</strong> your work is stored locally. Use “Hard Reset” inside Clear to wipe it clean.</li>
-          </ul>
-        </div>
-      </section>
-
       <!-- Capture wrapper: title + board -->
       <section id="capture-area">
         <!-- Editable Title -->
         <div class="title-wrap">
           <button id="title-edit" class="title-edit icon-btn" aria-label="Edit title" title="Edit title">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+            <!-- Pencil icon -->
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM21 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75L21 7.04z"/></svg>
           </button>
           <h1 id="board-title" class="editable" contenteditable="false" role="textbox" aria-multiline="true"
               aria-label="Tier board title" data-placeholder="Add a title…"></h1>
         </div>
 
         <!-- Tier Board -->
-        <section id="tier-board" aria-label="Tier board">
-          <!-- Tiers injected by JS -->
-        </section>
+        <section id="tier-board" aria-label="Tier board"></section>
       </section>
 
-      <!-- Action Bar (only here; removed from header) -->
+      <!-- Toolbar (single row; wraps on phones) -->
       <section class="toolbar" aria-label="Board actions">
-        <button id="btn-add-tier-2" class="btn">
+        <button id="btn-add-tier-2" class="btn action-add">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg>
           <span>Add a tier</span>
         </button>
-        <button id="btn-undo-2" class="btn" disabled>
+        <button id="btn-undo-2" class="btn action-undo" disabled>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5V2L7 7l5 5V8c3.3 0 6 2.7 6 6a6 6 0 0 1-9.7 4.7l-1.2 1.6A8 8 0 0 0 20 14c0-4.4-3.6-8-8-8z"/></svg>
           <span>Undo</span>
         </button>
-        <button id="btn-save-2" class="btn">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20h14v-8h-4v4H9v-4H5v8zM19 9l-7-7-7 7h4v4h6V9h4z"/></svg>
-          <span>Save PNG</span>
-        </button>
-        <button id="btn-clear-2" class="btn">
+        <button id="btn-clear-2" class="btn action-clear">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7h12l-1 14H7L6 7zm10.5-4l1 2H6.5l1-2H16.5z"/></svg>
           <span>Clear board</span>
         </button>
-        <button id="btn-theme-2" class="btn">
-          <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.76 4.84l-1.8-1.79L3.17 4.84l1.79 1.79 1.8-1.79zM1 13h3v-2H1v2zm10 10h2v-3h-2v3zm9.83-18.16l-1.79-1.79-1.79 1.79 1.79 1.79 1.79-1.79zM20 13h3v-2h-3v2zM6.76 19.16l-1.8 1.79 1.79 1.79 1.8-1.79-1.79-1.79zM17.24 19.16l1.79 1.79 1.79-1.79-1.79-1.79-1.79 1.79zM12 6a6 6 0 100 12 6 6 0 000-12z"/></svg>
-          <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
-          <span>Theme</span>
+        <button id="btn-save-2" class="btn action-save">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20h14v-8h-4v4H9v-4H5v8zM19 9l-7-7-7 7h4v4h6V9h4z"/></svg>
+          <span>Save PNG</span>
         </button>
+        <div class="toolbar-spacer" aria-hidden="true"></div>
+        <button id="btn-theme-2" class="btn action-theme"></button>
       </section>
 
       <!-- Image Storage -->
@@ -138,9 +119,6 @@
         <div id="storage-grid" class="storage-grid" role="list" aria-label="Unplaced circles"></div>
       </section>
     </main>
-
-    <!-- Mobile Half-Radial Picker -->
-    <div id="radial" class="radial" aria-hidden="true" role="menu"></div>
 
     <!-- Clear confirm modal -->
     <dialog id="confirm-clear">
@@ -154,5 +132,12 @@
         </div>
       </form>
     </dialog>
+
+    <!-- Minimal mobile picker (rendered dynamically; no background) -->
+    <div id="fstm-picker" aria-hidden="true"></div>
+
+    <footer class="site-footer" aria-label="Footer">
+      <small>&copy; FSTM</small>
+    </footer>
   </body>
 </html>
