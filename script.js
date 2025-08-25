@@ -1,496 +1,556 @@
-/* =========================
-   Tier Maker — Clean Build
-   ========================= */
+/* FSTM — Fireside Tier Maker
+   Features: responsive tiers, mobile half-radial, text/emoji circles with color,
+   image uploads to circles, add tier, undo stack, clear, PNG save with title,
+   dark/light theme, SVG icons, SortableJS drag without jitter, autosave via localStorage.
+*/
 
 (() => {
-  const TIERS = ["S","A","B","C","D"]; // canonical order
-  const overlayRoot = document.getElementById("overlayRoot");
-  const board = document.getElementById("tierBoard");
-  const tray = document.getElementById("itemsTray");
-  const themeToggle = document.getElementById("themeToggle");
-  const savePngBtn = document.getElementById("savePngBtn");
-  const form = document.getElementById("createForm");
-  const input = document.getElementById("newItemText");
-  const seedBtn = document.getElementById("seedBtn");
-  const appRoot = document.getElementById("appRoot");
+  const QS = (sel, el = document) => el.querySelector(sel);
+  const QSA = (sel, el = document) => [...el.querySelectorAll(sel)];
 
-  let openPickerEl = null;
-  let openMenuEl = null;
-  let dragState = null; // active drag record
+  // Persistent storage key
+  const STORE_KEY = 'FSTM_STATE_v1';
+  const THEME_KEY = 'FSTM_THEME_v1';
 
-  /* ---------- Theme ---------- */
-  const savedTheme = localStorage.getItem("tier.theme");
-  if (savedTheme === "dark") {
-    document.documentElement.setAttribute("data-theme", "dark");
-    themeToggle.checked = true;
+  // DOM
+  const boardEl = QS('#tier-board');
+  const storageGrid = QS('#storage-grid');
+  const titleEl = QS('#board-title');
+  const titleEditBtn = QS('#title-edit');
+  const addTierBtns = [QS('#btn-add-tier'), QS('#btn-add-tier-2')];
+  const undoBtns = [QS('#btn-undo'), QS('#btn-undo-2')];
+  const saveBtns = [QS('#btn-save'), QS('#btn-save-2')];
+  const clearBtns = [QS('#btn-clear'), QS('#btn-clear-2')];
+  const themeBtns = [QS('#btn-theme'), QS('#btn-theme-2')];
+  const confirmClearDlg = QS('#confirm-clear');
+  const hardResetBtn = QS('#btn-hard-reset');
+  const radial = QS('#radial');
+
+  const creatorForm = QS('#circle-creator');
+  const ccText = QS('#cc-text');
+  const ccColor = QS('#cc-color');
+
+  const fileInput = QS('#file-input');
+  const captureArea = QS('#capture-area');
+
+  // Default tiers
+  const DEFAULT_LABELS = ['S','A','B','C','D'];
+
+  // State
+  let state = null;
+  let undoStack = [];
+
+  const isMobile = () => matchMedia('(max-width: 720px)').matches;
+
+  // Utilities
+  const uid = (prefix='id') => `${prefix}_${Math.random().toString(36).slice(2,9)}`;
+
+  const cloneState = s => JSON.parse(JSON.stringify(s));
+
+  const pushUndo = () => {
+    undoStack.push(JSON.stringify(state));
+    if (undoStack.length > 50) undoStack.shift();
+    setUndoEnabled(true);
+  };
+
+  const setUndoEnabled = (on) => {
+    for (const b of undoBtns) b.disabled = !on;
+  };
+
+  const debounced = (fn, ms=300) => {
+    let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+  };
+
+  const saveLocal = debounced(() => {
+    localStorage.setItem(STORE_KEY, JSON.stringify(state));
+  }, 300);
+
+  const loadLocal = () => {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch { return null; }
+  };
+
+  const applyTheme = (t) => {
+    document.documentElement.setAttribute('data-theme', t);
+    localStorage.setItem(THEME_KEY, t);
+  };
+
+  // Model shape:
+  // state = {
+  //   title: "",
+  //   tiers: [{id, label, items:[itemId, ...]}],
+  //   items: { itemId: { id, type:'text'|'image', text?, color?, dataUrl? } },
+  //   storage: [itemId, ...]
+  // }
+
+  const newDefaultState = () => {
+    const tiers = DEFAULT_LABELS.map(l => ({ id: uid('tier'), label: l, items: [] }));
+    return { title: "", tiers, items: {}, storage: [] };
+  };
+
+  // Render
+  function renderAll() {
+    renderTitle();
+    renderBoard();
+    renderStorage();
+    initAllSortables();
+    saveLocal();
   }
-  themeToggle.addEventListener("change", () => {
-    const mode = themeToggle.checked ? "dark" : "light";
-    document.documentElement.setAttribute("data-theme", mode);
-    localStorage.setItem("tier.theme", mode);
-  });
 
-  /* ---------- Build Rows ---------- */
-  function buildBoard() {
-    board.innerHTML = "";
-    TIERS.forEach(t => board.appendChild(makeRow(t)));
+  function renderTitle() {
+    titleEl.textContent = state.title || '';
   }
 
-  function makeRow(tier) {
-    const row = document.createElement("div");
-    row.className = "tier-row";
-    row.dataset.tier = tier;
+  function renderBoard() {
+    boardEl.innerHTML = '';
+    state.tiers.forEach(tier => {
+      const row = document.createElement('div');
+      row.className = 'tier-row';
+      row.dataset.tierId = tier.id;
+      row.dataset.label = tier.label;
 
-    const label = document.createElement("div");
-    label.className = "tier-label";
-    label.dataset.tier = tier;
+      const label = document.createElement('div');
+      label.className = 'tier-label';
 
-    const title = document.createElement("span");
-    title.textContent = tier;
+      const letter = document.createElement('div');
+      letter.className = 'tier-letter';
+      letter.contentEditable = 'true';
+      letter.setAttribute('role','textbox');
+      letter.setAttribute('aria-label', 'Tier label');
+      letter.textContent = tier.label;
+      autoFitTierLabel(letter);
+      letter.addEventListener('input', () => {
+        const newVal = letter.textContent.trim().slice(0, 12);
+        letter.textContent = newVal;
+        autoFitTierLabel(letter);
+        pushUndo();
+        tier.label = newVal || '?';
+        row.dataset.label = tier.label;
+        // Update radial menu if open
+        if (radial.classList.contains('open')) buildRadialButtons();
+        saveLocal();
+      });
 
-    // Kebab button
-    const kebab = document.createElement("button");
-    kebab.className = "kebab";
-    kebab.setAttribute("aria-haspopup", "menu");
-    kebab.setAttribute("aria-expanded", "false");
-    kebab.setAttribute("aria-label", `Open row menu for ${tier}`);
+      label.appendChild(letter);
+      row.appendChild(label);
 
-    // three dots
-    for (let i=0;i<3;i++){
-      const dot = document.createElement("div");
-      dot.className = "dot";
-      kebab.appendChild(dot);
+      const itemsWrap = document.createElement('div');
+      itemsWrap.className = 'tier-items droplist';
+      itemsWrap.dataset.tierId = tier.id;
+
+      tier.items.forEach(id => {
+        const it = state.items[id];
+        itemsWrap.appendChild(renderCircle(it));
+      });
+
+      row.appendChild(itemsWrap);
+      boardEl.appendChild(row);
+    });
+  }
+
+  function renderStorage() {
+    storageGrid.innerHTML = '';
+    state.storage.forEach(id => {
+      const it = state.items[id];
+      storageGrid.appendChild(renderCircle(it));
+    });
+  }
+
+  function renderCircle(item) {
+    const el = document.createElement('div');
+    el.className = 'circle';
+    el.dataset.itemId = item.id;
+    el.setAttribute('role','listitem');
+    el.setAttribute('aria-label', item.type === 'text' ? `Circle ${item.text}` : 'Circle image');
+
+    if (item.type === 'text') {
+      el.style.background = item.color || 'var(--panel)';
+      const t = document.createElement('div');
+      t.className = 'circle-text';
+      t.textContent = item.text;
+      fitTextInCircle(t, el);
+      el.appendChild(t);
+    } else if (item.type === 'image') {
+      const wrap = document.createElement('div');
+      wrap.className = 'circle-img';
+      const img = document.createElement('img');
+      img.alt = 'Uploaded circle image';
+      img.src = item.dataUrl;
+      wrap.appendChild(img);
+      el.appendChild(wrap);
     }
 
-    label.append(title, kebab);
-
-    const drop = document.createElement("div");
-    drop.className = "tier-drop";
-    drop.setAttribute("aria-label", `Drop items on ${tier} tier`);
-    drop.dataset.tierDrop = tier;
-
-    row.append(label, drop);
-    return row;
-  }
-
-  buildBoard();
-
-  /* ---------- Create/Seed Items ---------- */
-  form.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const val = input.value.trim();
-    if (!val) return;
-    tray.appendChild(makeItem(val));
-    input.value = "";
-    input.focus();
-  });
-
-  seedBtn.addEventListener("click", () => {
-    ["Alpha","Beta","Gamma","Delta","Epsilon","Zeta","Eta","Theta","Iota"].forEach(t => {
-      tray.appendChild(makeItem(t));
+    // Mobile: tap to open radial from storage only
+    el.addEventListener('pointerdown', (ev) => {
+      if (!isMobile()) return; // drag on desktop
+      const parentIsStorage = el.parentElement === storageGrid;
+      if (!parentIsStorage) return; // only from storage radial
+      // Open radial
+      openRadialForCircle(ev, el);
     });
-  });
 
-  let itemIdSeq = 1;
-  function makeItem(label) {
-    const el = document.createElement("button");
-    el.type = "button";
-    el.className = "item";
-    el.textContent = glyph(label);
-    el.title = label;
-    el.dataset.itemId = String(itemIdSeq++);
-    el.setAttribute("aria-label", `Item ${label}`);
-    el.setAttribute("tabindex", "0");
-
-    enableItemInteractions(el);
     return el;
   }
 
-  // Simple glyph: first letter(s)
-  function glyph(label) {
-    const parts = label.trim().split(/\s+/);
-    const g = (parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "");
-    return g.toUpperCase() || "•";
+  function autoFitTierLabel(letterEl) {
+    const txt = letterEl.textContent || '';
+    // Big single letter? Go big; otherwise shrink
+    const len = txt.length || 1;
+    const calc = Math.max(28, 88 - len * 6);
+    letterEl.style.setProperty('--fit', `${calc}px`);
   }
 
-  /* ---------- Item interactions (tap opens picker; drag for desktop) ---------- */
-  function enableItemInteractions(el){
-    // Open picker on click/tap
-    el.addEventListener("click", (e) => {
-      // If a drag just ended, ignore the click that follows
-      if (dragState?.justDropped) { dragState.justDropped = false; return; }
-      openPickerFor(el);
-    });
-
-    // Keyboard: Enter or Space opens picker
-    el.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.code === "Space") {
-        e.preventDefault();
-        openPickerFor(el);
-      }
-    });
-
-    // Pointer-based dragging (prevents OS file/window drags)
-    el.addEventListener("dragstart", (e) => e.preventDefault()); // kill native DnD
-    el.addEventListener("pointerdown", onPointerDown);
+  // Fit text in circle by scaling down font size based on content length
+  function fitTextInCircle(textEl, circleEl) {
+    const base = 18;
+    const txt = textEl.textContent.trim();
+    let size = base;
+    if (txt.length <= 2) size = 28;
+    else if (txt.length <= 5) size = 24;
+    else if (txt.length <= 10) size = 20;
+    else if (txt.length <= 16) size = 18;
+    else size = 16;
+    textEl.style.fontSize = `${size}px`;
   }
 
-  function onPointerDown(e){
-    const target = e.currentTarget;
-    // Left button or primary touch only
-    if (e.button !== 0 && e.pointerType !== "touch") return;
+  // SortableJS init
+  let sortables = [];
+  function initAllSortables() {
+    // Destroy existing
+    sortables.forEach(s => s.destroy());
+    sortables = [];
 
-    // Start drag only on long-press for touch; immediate for mouse/pen
-    const startPoint = { x: e.clientX, y: e.clientY, t: performance.now() };
-    let longPressTimer = null;
-    let moved = false;
-
-    const startDrag = () => {
-      // Build drag state
-      dragState = {
-        item: target,
-        pointerId: e.pointerId,
-        ghost: null,
-        offsetX: 0,
-        offsetY: 0,
-        justDropped: false
-      };
-
-      // Prevent page gestures while dragging this element
-      target.setPointerCapture(e.pointerId);
-      target.classList.add("dragging");
-      target.style.touchAction = "none";
-
-      // Ghost element (fixed) so we never fight grid layout
-      const rect = target.getBoundingClientRect();
-      const ghost = target.cloneNode(true);
-      ghost.style.position = "fixed";
-      ghost.style.left = `${rect.left}px`;
-      ghost.style.top = `${rect.top}px`;
-      ghost.style.zIndex = 999;
-      ghost.style.pointerEvents = "none";
-      overlayRoot.appendChild(ghost);
-
-      dragState.ghost = ghost;
-      dragState.offsetX = e.clientX - rect.left;
-      dragState.offsetY = e.clientY - rect.top;
-
-      // Close overlays while dragging
-      closePicker();
-      closeMenu();
-
-      window.addEventListener("pointermove", onPointerMove, { passive: false });
-      window.addEventListener("pointerup", onPointerUp, { passive: false });
-      window.addEventListener("pointercancel", onPointerUp, { passive: false });
+    const options = {
+      group: 'fstm',
+      animation: 120,
+      ghostClass: 'dragging',
+      dragClass: 'dragging',
+      forceFallback: true,       // better on iPad/iPhone
+      fallbackOnBody: true,
+      touchStartThreshold: 4,
+      delayOnTouchOnly: true,
+      delay: 0,
+      onEnd: handleSortEnd
     };
 
-    // For touch: require slight hold (150ms) unless user obviously moves
-    if (e.pointerType === "touch") {
-      longPressTimer = setTimeout(() => {
-        startDrag();
-      }, 150);
+    // each row container
+    QSA('.tier-items').forEach(el => sortables.push(new Sortable(el, options)));
+    // storage
+    sortables.push(new Sortable(storageGrid, options));
+  }
+
+  function handleSortEnd(evt) {
+    // Build consistent state from DOM after any drag
+    pushUndo();
+    rebuildStateFromDOM();
+    saveLocal();
+  }
+
+  function rebuildStateFromDOM() {
+    // Read tiers and items order from DOM
+    const newTiers = state.tiers.map(t => ({ id: t.id, label: t.label, items: [] }));
+    const byId = Object.fromEntries(state.tiers.map((t,i)=>[t.id,i]));
+    QSA('.tier-items').forEach(itemsWrap => {
+      const tid = itemsWrap.dataset.tierId;
+      const out = [];
+      QSA('.circle', itemsWrap).forEach(c => out.push(c.dataset.itemId));
+      newTiers[byId[tid]].items = out;
+    });
+    const storageItems = [];
+    QSA('.circle', storageGrid).forEach(c => storageItems.push(c.dataset.itemId));
+
+    state.tiers = newTiers;
+    state.storage = storageItems;
+  }
+
+  // Title editing
+  titleEditBtn.addEventListener('click', () => {
+    const editing = titleEl.getAttribute('contenteditable') === 'true';
+    titleEl.setAttribute('contenteditable', editing ? 'false' : 'true');
+    if (!editing) {
+      titleEl.focus();
+      placeCaretAtEnd(titleEl);
     } else {
-      startDrag();
+      // finish edit
+      pushUndo();
+      state.title = titleEl.textContent.trim();
+      saveLocal();
     }
-
-    function cancelTimers(){
-      if (longPressTimer){ clearTimeout(longPressTimer); longPressTimer = null; }
-    }
-
-    function onPointerMove(ev){
-      if (!dragState) return;
-      // If user moved before long press, start drag immediately
-      if (e.pointerId === ev.pointerId && !dragState.ghost && e.pointerType === "touch") {
-        const dx = Math.abs(ev.clientX - startPoint.x);
-        const dy = Math.abs(ev.clientY - startPoint.y);
-        if (dx + dy > 6) { cancelTimers(); }
-        return;
-      }
-
-      if (!dragState.ghost) return;
-      ev.preventDefault(); // prevent scrolling during drag
-      moved = true;
-
-      const x = ev.clientX - dragState.offsetX;
-      const y = ev.clientY - dragState.offsetY;
-      dragState.ghost.style.left = `${x}px`;
-      dragState.ghost.style.top = `${y}px`;
-    }
-
-    function onPointerUp(ev){
-      cancelTimers();
-
-      if (dragState && dragState.ghost){
-        // Drop target resolution
-        const dropAt = document.elementFromPoint(ev.clientX, ev.clientY);
-        const dropZone = dropAt?.closest?.(".tier-drop, #itemsTray");
-
-        if (dropZone){
-          dropZone.appendChild(dragState.item);
-          dragState.justDropped = true; // avoid opening picker due to click-after-drag
-        }
-
-        // Cleanup
-        dragState.item.classList.remove("dragging");
-        dragState.item.style.touchAction = "";
-        dragState.item.releasePointerCapture(dragState.pointerId);
-        dragState.ghost.remove();
-        dragState = null;
-      }
-
-      window.removeEventListener("pointermove", onPointerMove);
-      window.removeEventListener("pointerup", onPointerUp);
-      window.removeEventListener("pointercancel", onPointerUp);
-    }
-  }
-
-  /* ---------- Radial Picker ---------- */
-  function closePicker(){
-    if (openPickerEl){ openPickerEl.remove(); openPickerEl = null; }
-  }
-
-  function openPickerFor(itemEl){
-    closePicker(); // always one
-    const picker = buildPicker();
-    document.body.appendChild(picker);
-    openPickerEl = picker;
-
-    // Position logic: prefer below the circle; clamp inside viewport.
-    const r = itemEl.getBoundingClientRect();
-    const radius = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--picker-radius"));
-    const pad = 8;
-
-    // Default below
-    let top = r.bottom + pad;
-    // If it would overflow bottom, place above
-    if (top + radius > window.innerHeight) {
-      top = r.top - radius - pad;
-    }
-    // Center horizontally around the circle
-    let left = r.left + r.width / 2 - radius / 2;
-
-    // Clamp inside viewport with padding
-    left = Math.min(Math.max(left, pad), window.innerWidth - radius - pad);
-    top  = Math.min(Math.max(top, pad), window.innerHeight - radius - pad);
-
-    picker.style.top = `${top}px`;
-    picker.style.left = `${left}px`;
-
-    // Outside click should NOT auto-close the picker
-    // (per request: the picker closes only after choosing a tier)
-  }
-
-  function buildPicker(){
-    const el = document.createElement("div");
-    el.className = "picker";
-    el.setAttribute("role", "dialog");
-    el.setAttribute("aria-label", "Choose a tier");
-    const grid = document.createElement("div");
-    grid.className = "picker-grid";
-    el.appendChild(grid);
-
-    // Place buttons in a circle, keeping canonical order S A B C D clockwise
-    const R = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--picker-radius")) / 2 - 32;
-    const center = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--picker-radius")) / 2;
-    // Angles: 270, 342, 54, 126, 198 deg (spaced evenly, starting at top)
-    const angles = [270, 342, 54, 126, 198];
-
-    TIERS.forEach((tier, i) => {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "picker-btn";
-      btn.dataset.tier = tier;
-      btn.textContent = tier;
-      btn.setAttribute("aria-label", `Place in ${tier} tier`);
-
-      const rad = angles[i] * Math.PI / 180;
-      const x = center + R * Math.cos(rad);
-      const y = center + R * Math.sin(rad);
-
-      btn.style.left = `${x - 22}px`;
-      btn.style.top  = `${y - 22}px`;
-
-      btn.addEventListener("click", () => {
-        // Find the most recently focused/active item; fallback to last clicked
-        const active = document.activeElement?.classList?.contains("item") ? document.activeElement : lastClickedItem();
-        const item = active || findAnyItem();
-        if (!item) { closePicker(); return; }
-
-        const dropZone = board.querySelector(`.tier-drop[data-tier-drop="${tier}"]`);
-        dropZone.appendChild(item);
-        closePicker();
-      });
-
-      grid.appendChild(btn);
-    });
-
-    return el;
-  }
-
-  let _lastClickedItem = null;
-  function lastClickedItem(){ return _lastClickedItem; }
-  function findAnyItem(){ return document.querySelector(".item"); }
-
-  // Track last clicked item for picker targeting
-  appRoot.addEventListener("click", (e) => {
-    const it = e.target.closest?.(".item");
-    if (it) _lastClickedItem = it;
-  }, true);
-
-  /* ---------- Kebab Menu ---------- */
-  function closeMenu(){
-    if (openMenuEl){ openMenuEl.remove(); openMenuEl = null; }
-    document.querySelectorAll(".kebab[aria-expanded='true']").forEach(k => k.setAttribute("aria-expanded","false"));
-  }
-
-  board.addEventListener("click", (e) => {
-    const kebab = e.target.closest(".kebab");
-    if (!kebab) return;
-    e.stopPropagation();
-
-    if (openMenuEl){ closeMenu(); }
-
-    kebab.setAttribute("aria-expanded", "true");
-    const row = kebab.closest(".tier-row");
-    openMenuEl = buildMenuForRow(row);
-
-    document.body.appendChild(openMenuEl);
-    positionMenuAtButton(openMenuEl, kebab);
   });
 
-  function buildMenuForRow(row){
-    const menu = document.createElement("div");
-    menu.className = "menu";
-    menu.setAttribute("role","menu");
-
-    const ul = document.createElement("ul");
-    menu.appendChild(ul);
-
-    const btns = [
-      { id: "rename", text: "Rename Tier…" },
-      { id: "clear",  text: "Clear Items"  },
-      { id: "color",  text: "Change Color…" }
-    ];
-
-    for (const b of btns){
-      const li = document.createElement("li");
-      const bt = document.createElement("button");
-      bt.type = "button";
-      bt.dataset.action = b.id;
-      bt.textContent = b.text;
-      bt.setAttribute("role","menuitem");
-      li.appendChild(bt);
-      ul.appendChild(li);
+  titleEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      titleEditBtn.click();
     }
+  });
 
-    menu.addEventListener("click", (e) => {
-      const action = e.target.closest("button")?.dataset?.action;
-      if (!action) return;
-      if (action === "rename"){
-        const current = row.querySelector(".tier-label span").textContent.trim();
-        const name = prompt("Rename tier label:", current);
-        if (name && name.trim()){
-          row.querySelector(".tier-label span").textContent = name.trim();
-        }
-        // keep menu open until an explicit choice is made; rename counts as a choice
-        closeMenu();
-      } else if (action === "clear"){
-        row.querySelectorAll(".tier-drop .item").forEach(n => tray.appendChild(n));
-        closeMenu();
-      } else if (action === "color"){
-        const c = prompt("Enter a CSS color (e.g., #ffcc66 or rgb(10 200 100)):");
-        if (c){
-          row.querySelector(".tier-label").style.background = c;
-        }
-        closeMenu();
-      }
+  function placeCaretAtEnd(el) {
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  // Creator form
+  creatorForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = ccText.value.trim();
+    if (!text) return;
+    pushUndo();
+
+    const id = uid('item');
+    state.items[id] = { id, type: 'text', text, color: ccColor.value };
+    state.storage.unshift(id);
+    ccText.value = '';
+    renderStorage();
+    initAllSortables();
+    saveLocal();
+  });
+
+  // File upload
+  fileInput.addEventListener('change', async (e) => {
+    const files = [...e.target.files];
+    if (!files.length) return;
+    pushUndo();
+
+    for (const f of files) {
+      const dataUrl = await readFileAsDataURL(f);
+      const id = uid('item');
+      state.items[id] = { id, type: 'image', dataUrl };
+      state.storage.push(id);
+    }
+    renderStorage();
+    initAllSortables();
+    saveLocal();
+    fileInput.value = '';
+  });
+
+  function readFileAsDataURL(file) {
+    return new Promise((res, rej) => {
+      const fr = new FileReader();
+      fr.onload = () => res(fr.result);
+      fr.onerror = rej;
+      fr.readAsDataURL(file);
     });
-
-    // Close only on outside click or Escape; not on hover/blur
-    setTimeout(() => {
-      const onDocClick = (ev) => {
-        if (!menu.contains(ev.target)) {
-          closeMenu();
-          document.removeEventListener("click", onDocClick);
-          document.removeEventListener("keydown", onKey);
-        }
-      };
-      const onKey = (ev) => {
-        if (ev.key === "Escape"){ closeMenu(); document.removeEventListener("click", onDocClick); document.removeEventListener("keydown", onKey); }
-      };
-      document.addEventListener("click", onDocClick);
-      document.addEventListener("keydown", onKey);
-    }, 0);
-
-    return menu;
   }
 
-  function positionMenuAtButton(menu, btn){
-    const r = btn.getBoundingClientRect();
-    const pad = 8;
-    let left = r.right + 8;
-    let top  = r.top;
-
-    // If it goes offscreen to the right, place to the left
-    const w = 220; // approximate
-    if (left + w > window.innerWidth - pad) left = r.left - w - 8;
-
-    // Clamp vertically
-    menu.style.left = `${Math.max(pad, Math.min(left, window.innerWidth - w - pad))}px`;
-    menu.style.top  = `${Math.max(pad, Math.min(top, window.innerHeight - 160))}px`;
+  // Add Tier
+  function addTier() {
+    pushUndo();
+    const nextLabel = suggestNextTierLabel();
+    state.tiers.push({ id: uid('tier'), label: nextLabel, items: [] });
+    renderBoard();
+    initAllSortables();
+    saveLocal();
   }
+  function suggestNextTierLabel() {
+    // E, F, G... after D; fallback "New"
+    const labels = state.tiers.map(t=>t.label.toUpperCase());
+    for (let code=69; code<=90; code++) {
+      const ch = String.fromCharCode(code);
+      if (!labels.includes(ch)) return ch;
+    }
+    return 'New';
+  }
+  addTierBtns.forEach(b => b.addEventListener('click', addTier));
 
-  /* ---------- Save PNG ---------- */
-  savePngBtn.addEventListener("click", async () => {
-    try{
-      // Use board only (not tray), so results match expectations
-      const node = board;
-      // Ensure external images (if any) can draw without tainting
-      node.querySelectorAll("img").forEach(img => img.setAttribute("crossorigin", "anonymous"));
+  // Undo
+  function doUndo() {
+    const prev = undoStack.pop();
+    if (!prev) return;
+    state = JSON.parse(prev);
+    setUndoEnabled(undoStack.length > 0);
+    renderAll();
+  }
+  undoBtns.forEach(b => b.addEventListener('click', doUndo));
 
-      const theme = document.documentElement.getAttribute("data-theme") || "light";
-      const canvas = await html2canvas(node, {
-        backgroundColor: theme === "dark" ? "#0b1220" : "#ffffff",
-        useCORS: true,
-        scale: Math.min(2, window.devicePixelRatio || 1.5)
+  // Clear / Reset
+  function openClearDialog() {
+    confirmClearDlg.showModal();
+  }
+  function closeClearDialog() {
+    confirmClearDlg.close();
+  }
+  clearBtns.forEach(b => b.addEventListener('click', openClearDialog));
+
+  confirmClearDlg.addEventListener('close', () => {
+    // If closed by backdrop or Cancel, nothing
+  });
+  confirmClearDlg.addEventListener('click', (e) => {
+    // form method=dialog takes care of returns
+    if (e.target.closest('[value="cancel"]')) closeClearDialog();
+  });
+
+  hardResetBtn.addEventListener('click', () => {
+    // Wipe localstorage and reload fresh
+    localStorage.removeItem(STORE_KEY);
+    undoStack = [];
+    state = newDefaultState();
+    renderAll();
+  });
+
+  confirmClearDlg.addEventListener('close', (e) => {
+    // No-op
+  });
+
+  // Allow keyboard submit of dialog buttons
+  confirmClearDlg.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const v = e.submitter?.value;
+    if (v === 'clear') {
+      pushUndo();
+      state.tiers.forEach(t => t.items = []);
+      state.storage = [];
+      renderAll();
+    } else if (v === 'hard') {
+      // already handled by click
+    }
+    closeClearDialog();
+  });
+
+  // Save PNG
+  async function savePNG() {
+    // Temporarily ensure scrollbars hidden
+    const oldOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    try {
+      const dataUrl = await window.htmlToImage.toPng(captureArea, {
+        pixelRatio: Math.min(2, window.devicePixelRatio || 1),
+        cacheBust: true,
+        backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--bg')?.trim() || '#111'
       });
-      const data = canvas.toDataURL("image/png");
-      const a = document.createElement("a");
-      a.href = data;
-      a.download = "tier-board.png";
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = `FSTM_${Date.now()}.png`;
+      document.body.appendChild(a);
       a.click();
-    } catch (err){
-      alert("Unable to save PNG. Try a desktop browser if the problem persists.");
+      a.remove();
+    } catch (err) {
+      alert('PNG save failed. Try again after placing at least one item.');
       console.error(err);
+    } finally {
+      document.body.style.overflow = oldOverflow;
     }
-  });
+  }
+  saveBtns.forEach(b => b.addEventListener('click', savePNG));
 
-  /* ---------- Accessibility niceties ---------- */
-  // Keep “Help” link color visible across themes handled by CSS tokens.
+  // Theme toggle
+  function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme') || 'dark';
+    applyTheme(current === 'dark' ? 'light' : 'dark');
+  }
+  themeBtns.forEach(b => b.addEventListener('click', toggleTheme));
 
-  /* ---------- Utilities ---------- */
-  function closeAllOverlays(){
-    closePicker();
-    closeMenu();
+  // Mobile half-radial picker
+  let radialTargetItemId = null;
+  function openRadialForCircle(pointerEvent, circleEl) {
+    radialTargetItemId = circleEl.dataset.itemId;
+    buildRadialButtons();
+    positionRadial(pointerEvent.clientX, pointerEvent.clientY);
+    radial.classList.add('open');
+    radial.setAttribute('aria-hidden','false');
+
+    // Close on outside tap
+    const onDoc = (ev) => {
+      if (!radial.contains(ev.target)) closeRadial();
+    };
+    setTimeout(() => document.addEventListener('pointerdown', onDoc, { once: true }), 0);
   }
 
-  // Only close overlays when clicking outside both overlays and interactive anchors
-  document.addEventListener("click", (e) => {
-    const withinMenu = openMenuEl && openMenuEl.contains(e.target);
-    const onKebab = e.target.closest?.(".kebab");
-    const withinPicker = openPickerEl && openPickerEl.contains(e.target);
-    const onItem = e.target.closest?.(".item");
+  function buildRadialButtons() {
+    radial.innerHTML = '';
+    const tiersInOrder = state.tiers.slice(); // preserve order S..D..new
+    const radius = 90;
+    const centerX = 110, centerY = 110; // bottom center hinge
+    // Always left->right the same perceived order
+    const n = tiersInOrder.length;
+    // Distribute across 180 degrees, starting from 180deg to 0deg
+    tiersInOrder.forEach((t, idx) => {
+      const angle = Math.PI - (idx * (Math.PI/(Math.max(1, n-1))));
+      const x = centerX + radius * Math.cos(angle);
+      const y = centerY - radius * Math.sin(angle);
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = (t.label || '?').slice(0,2).toUpperCase();
+      btn.style.left = `${x}px`;
+      btn.style.top = `${y}px`;
+      btn.addEventListener('click', () => {
+        placeRadialTargetIntoTier(t.id);
+      });
+      radial.appendChild(btn);
+    });
+  }
 
-    if (!withinMenu && !onKebab && !withinPicker && !onItem){
-      closeAllOverlays();
+  function positionRadial(x, y) {
+    const w = 220, h = 120;
+    let left = x - w/2;
+    let top = y - (h + 16); // appear above the finger
+    const maxL = window.innerWidth - w - 8;
+    const maxT = window.innerHeight - h - 8;
+    left = Math.max(8, Math.min(left, maxL));
+    top = Math.max(8, Math.min(top, maxT));
+    radial.style.transform = `translate(${left}px, ${top}px)`;
+  }
+
+  function closeRadial() {
+    radialTargetItemId = null;
+    radial.classList.remove('open');
+    radial.setAttribute('aria-hidden','true');
+    radial.style.transform = 'translate(-9999px, -9999px)';
+  }
+
+  function placeRadialTargetIntoTier(tierId) {
+    if (!radialTargetItemId) return;
+    pushUndo();
+
+    // Remove from storage if present
+    state.storage = state.storage.filter(id => id !== radialTargetItemId);
+    // Insert at end of chosen tier
+    const tier = state.tiers.find(t => t.id === tierId);
+    if (tier) tier.items.push(radialTargetItemId);
+
+    closeRadial();
+    renderBoard();
+    renderStorage();
+    initAllSortables();
+    saveLocal();
+  }
+
+  // Keyboard helpers: Enter to stop editing title
+  titleEl.addEventListener('blur', () => {
+    if (titleEl.getAttribute('contenteditable') === 'true') {
+      titleEditBtn.click();
     }
   });
 
-  // Keep picker order consistent no matter placement (handled by static TIERS array and fixed angle map)
+  // Initialize
+  function init() {
+    // Theme
+    applyTheme(localStorage.getItem(THEME_KEY) || 'dark');
 
-  // Prevent accidental text selection when dragging fast
-  document.addEventListener("selectstart", (e) => {
-    if (dragState) e.preventDefault();
-  });
+    // Load or create
+    const loaded = loadLocal();
+    state = loaded || newDefaultState();
+
+    renderAll();
+
+    // Wire duplicated buttons
+    // (already wired above via arrays)
+
+    // Accessibility: prevent page scroll on drag
+    document.addEventListener('touchmove', (e) => {
+      const isDragging = document.querySelector('.dragging');
+      if (isDragging) e.preventDefault();
+    }, { passive: false });
+
+    // Keep undo disabled if no history
+    setUndoEnabled(undoStack.length > 0);
+  }
+
+  init();
 
 })();
