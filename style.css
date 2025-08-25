@@ -1,4 +1,4 @@
-/* CSS reset + vars */
+/* Reset + variables */
 *,
 *::before,
 *::after { box-sizing: border-box; }
@@ -16,11 +16,12 @@
   --ok: #67d36b;
   --border: #2a2f42;
 
-  --row-S: #e64e4e;
-  --row-A: #f0922a;
-  --row-B: #f4d13a;
-  --row-C: #58c39a;
-  --row-D: #7C9EFF;
+  /* brighter, more colorful row palettes */
+  --row-S: #c14b61; /* rose */
+  --row-A: #e7843a; /* orange */
+  --row-B: #e3c643; /* yellow */
+  --row-C: #4ea88d; /* teal-green */
+  --row-D: #6c8fe8; /* periwinkle */
 
   --radius: 14px;
   --shadow-1: 0 4px 18px rgba(0,0,0,.2), 0 1px 0 rgba(255,255,255,.02) inset;
@@ -60,32 +61,10 @@ h3 { font-size: 16px; }
   padding: 16px clamp(16px, 4vw, 24px);
 }
 
-.site-header {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: 12px;
-}
-
 .brand { display: flex; align-items: center; gap: 12px; }
 .brand-mark { width: 28px; height: 28px; fill: var(--accent-2); }
 .brand-name { font-weight: 800; letter-spacing: 0.5px; }
 .brand-sub { color: var(--muted); font-size: 12px; }
-
-.quick-actions { display: flex; gap: 8px; }
-
-.icon-btn {
-  display: grid; place-items: center;
-  width: 40px; height: 40px;
-  border: 1px solid var(--border);
-  background: var(--panel);
-  border-radius: 10px;
-  box-shadow: var(--shadow-1);
-  cursor: pointer;
-}
-.icon-btn svg { width: 20px; height: 20px; fill: var(--text); opacity: .9; }
-.icon-btn:disabled { opacity: .5; cursor: not-allowed; }
-.icon-btn:hover { transform: translateY(-1px); }
 
 main {
   max-width: 1200px;
@@ -161,8 +140,8 @@ main {
 .upload-area .hint { margin: 8px 0 0; color: var(--muted); font-size: 13px; }
 
 /* Help */
-.help details { background: var(--elev); border: 1px solid var(--border); border-radius: 12px; padding: 10px; }
-.help summary { cursor: pointer; font-weight: 700; margin-bottom: 8px; }
+.device-tag { color: var(--muted); margin: 0 0 4px; }
+.help-list { margin: 0; padding-left: 18px; }
 
 /* Title */
 .title-wrap {
@@ -185,12 +164,10 @@ main {
 #board-title:empty::before { content: attr(data-placeholder); color: var(--muted); }
 
 /* Tier board */
-#tier-board {
-  display: grid; gap: 10px;
-}
+#tier-board { display: grid; gap: 10px; }
 .tier-row {
   display: grid;
-  grid-template-columns: 124px 1fr;
+  grid-template-columns: 136px 1fr;
   gap: 10px;
   align-items: stretch;
 }
@@ -198,22 +175,42 @@ main {
   background: var(--elev);
   border: 1px solid var(--border);
   border-radius: 12px;
-  display: grid; place-items: center;
-  padding: 8px;
+  display: grid;
+  place-items: center;
+  padding: 8px 8px 12px 8px;
   position: relative;
+  overflow: hidden; /* stop any growth */
 }
 .tier-letter {
   width: 100%;
+  max-width: 100%;
   text-align: center;
   font-weight: 900;
   letter-spacing: 0.5px;
-  /* auto-fit via clamp + variable */
-  font-size: clamp(22px, var(--fit, 56px), 72px);
   line-height: 1;
   user-select: text;
+  white-space: nowrap; /* keep single line */
+  overflow: hidden;
+  text-overflow: clip;
+  font-size: 72px; /* start large; JS will clamp */
 }
 .tier-letter[contenteditable="true"] { caret-color: var(--accent); }
 .tier-letter::selection { background: color-mix(in oklab, var(--accent) 32%, transparent); }
+
+/* little edit + delete affordances */
+.tier-hint {
+  position: absolute; bottom: 4px; left: 8px; right: 8px;
+  color: color-mix(in oklab, var(--text) 65%, transparent);
+  font-size: 11px; text-align: center; pointer-events: none;
+}
+.tier-del {
+  position: absolute; top: 6px; right: 6px;
+  width: 22px; height: 22px; border-radius: 999px;
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--danger) 20%, var(--panel));
+  color: var(--text); font-weight: 900; line-height: 1;
+  display: grid; place-items: center; cursor: pointer;
+}
 
 .tier-items {
   background: var(--elev);
@@ -255,6 +252,7 @@ main {
   padding: 10px;
   line-height: 1.05;
   word-break: break-word;
+  color: #fff;
 }
 .circle-img {
   position: absolute; inset: 0; border-radius: 999px; overflow: hidden;
@@ -277,31 +275,31 @@ main {
   padding: 10px;
 }
 
-/* Radial (mobile picker) */
+/* Mobile half-radial (smaller + higher contrast) */
 .radial {
   position: fixed;
   left: 0; top: 0;
   transform: translate(-9999px, -9999px);
-  width: 220px; height: 110px; /* half circle */
+  width: 180px; height: 90px; /* smaller half circle */
   background: transparent;
   pointer-events: none;
-  z-index: 60;
+  z-index: 9999;
 }
 .radial.open { pointer-events: auto; }
 .radial::before {
   content: "";
   position: absolute; left: 0; top: 0; right: 0; bottom: 0;
-  border-radius: 110px 110px 0 0;
-  background: var(--panel);
+  border-radius: 90px 90px 0 0;
+  background: color-mix(in oklab, var(--panel) 85%, #000 15%);
   border: 1px solid var(--border);
-  box-shadow: var(--shadow-2);
+  box-shadow: 0 10px 24px rgba(0,0,0,.45);
 }
 .radial button {
   position: absolute;
-  width: 44px; height: 44px;
+  width: 38px; height: 38px;
   border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--elev);
+  border: 1px solid color-mix(in oklab, var(--text) 40%, transparent);
+  background: color-mix(in oklab, var(--elev) 75%, #000 25%);
   color: var(--text);
   font-weight: 900;
   display: grid; place-items: center;
@@ -321,12 +319,12 @@ dialog::backdrop { background: rgba(0,0,0,.5); }
 .confirm-card p { margin: 0 0 12px; color: var(--muted); }
 .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
 
-/* Row color accents on the left label */
-.tier-row[data-label="S"] .tier-label { background: color-mix(in oklab, var(--row-S) 24%, var(--elev)); }
-.tier-row[data-label="A"] .tier-label { background: color-mix(in oklab, var(--row-A) 24%, var(--elev)); }
-.tier-row[data-label="B"] .tier-label { background: color-mix(in oklab, var(--row-B) 24%, var(--elev)); }
-.tier-row[data-label="C"] .tier-label { background: color-mix(in oklab, var(--row-C) 24%, var(--elev)); }
-.tier-row[data-label="D"] .tier-label { background: color-mix(in oklab, var(--row-D) 24%, var(--elev)); }
+/* Row color accents on the left label (brighter) */
+.tier-row[data-label="S"] .tier-label { background: color-mix(in oklab, var(--row-S) 45%, var(--elev)); }
+.tier-row[data-label="A"] .tier-label { background: color-mix(in oklab, var(--row-A) 45%, var(--elev)); }
+.tier-row[data-label="B"] .tier-label { background: color-mix(in oklab, var(--row-B) 45%, var(--elev)); }
+.tier-row[data-label="C"] .tier-label { background: color-mix(in oklab, var(--row-C) 45%, var(--elev)); }
+.tier-row[data-label="D"] .tier-label { background: color-mix(in oklab, var(--row-D) 45%, var(--elev)); }
 
 /* Footer */
 .site-footer { color: var(--muted); text-align: center; }
@@ -336,3 +334,8 @@ dialog::backdrop { background: rgba(0,0,0,.5); }
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+/* --- PNG capture helpers --- */
+.capture-mode .tier-items { overflow: visible; }        /* include full row width */
+.capture-mode #radial { visibility: hidden !important; }
+.capture-mode .title-wrap.is-empty { display: none; }   /* hide empty title in capture */
