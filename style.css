@@ -1,7 +1,8 @@
-/* Reset + variables */
+/* Reset & base */
 *,
 *::before,
 *::after { box-sizing: border-box; }
+html, body { height: 100%; }
 
 :root {
   --bg: #0e0f12;
@@ -10,22 +11,22 @@
   --text: #f6f7fb;
   --muted: #aeb3c2;
   --accent: #7C9EFF;
-  --accent-2: #58c39a;
-  --danger: #ff5d66;
-  --warn: #ffb942;
-  --ok: #67d36b;
+  --danger: #e5484d;
+  --ok: #46c480;
+  --warn: #f5d90a;
+  --info: #4f7cff;
   --border: #2a2f42;
-
-  /* brighter, more colorful row palettes */
-  --row-S: #c14b61; /* rose */
-  --row-A: #e7843a; /* orange */
-  --row-B: #e3c643; /* yellow */
-  --row-C: #4ea88d; /* teal-green */
-  --row-D: #6c8fe8; /* periwinkle */
-
   --radius: 14px;
-  --shadow-1: 0 4px 18px rgba(0,0,0,.2), 0 1px 0 rgba(255,255,255,.02) inset;
-  --shadow-2: 0 8px 28px rgba(0,0,0,.35);
+
+  /* Tier label colors (bright) */
+  --row-S: #e64e4e;
+  --row-A: #f0922a;
+  --row-B: #f4d13a;
+  --row-C: #58c39a;
+  --row-D: #7C9EFF;
+
+  /* Circle size (slightly bigger) */
+  --circle: 84px;
 }
 
 html[data-theme="light"] {
@@ -34,15 +35,9 @@ html[data-theme="light"] {
   --elev: #ffffff;
   --text: #0f1222;
   --muted: #5a637b;
-  --accent: #3f6aff;
-  --accent-2: #259a74;
   --border: #e9ecf2;
-
-  --shadow-1: 0 4px 18px rgba(0,0,0,.05);
-  --shadow-2: 0 8px 28px rgba(0,0,0,.12);
 }
 
-html, body { height: 100%; }
 body {
   margin: 0;
   background: var(--bg);
@@ -50,22 +45,46 @@ body {
   font: 16px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Inter, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
 }
 
-h1, h2, h3 { margin: 0; font-weight: 700; }
-h1 { font-size: clamp(24px, 3.2vw, 42px); }
-h2 { font-size: clamp(18px, 2.2vw, 24px); }
-h3 { font-size: 16px; }
-
-.site-header, .site-footer {
+/* Header (brand only, neon yellow-green, big) */
+.site-header {
   max-width: 1200px;
   margin: 0 auto;
   padding: 16px clamp(16px, 4vw, 24px);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.brand-name {
+  color: #C8FF00;           /* neon yellow-green */
+  font-weight: 900;
+  letter-spacing: 1px;
+  font-size: clamp(26px, 5vw, 44px);
 }
 
-.brand { display: flex; align-items: center; gap: 12px; }
-.brand-mark { width: 28px; height: 28px; fill: var(--accent-2); }
-.brand-name { font-weight: 800; letter-spacing: 0.5px; }
-.brand-sub { color: var(--muted); font-size: 12px; }
+/* Help chip (collapsed by default) */
+.help-chip {
+  margin-left: auto;
+}
+.help-chip > summary {
+  cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+  background: color-mix(in oklab, var(--panel) 70%, #000 30%);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-weight: 700;
+  user-select: none;
+}
+.help-chip > summary svg { width: 16px; height: 16px; fill: var(--text); opacity: .9; }
+.help-body {
+  margin-top: 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  max-width: min(720px, 90vw);
+}
 
+/* Layout */
 main {
   max-width: 1200px;
   margin: 8px auto 64px;
@@ -74,28 +93,19 @@ main {
   gap: 16px;
 }
 
-/* Panels */
-.panel, .help, .storage {
+/* Panels & inputs */
+.panel,
+.storage {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 14px;
-  box-shadow: var(--shadow-1);
 }
-
 .panel-title { margin-bottom: 10px; }
-.panel-header {
-  display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
-}
+.panel-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
 .panel-header svg { width: 18px; height: 18px; fill: var(--muted); }
-
-.panel-group .panel-grid {
-  display: grid; gap: 16px;
-  grid-template-columns: 1fr 1fr;
-}
-@media (max-width: 820px) {
-  .panel-group .panel-grid { grid-template-columns: 1fr; }
-}
+.panel-grid { display: grid; gap: 16px; grid-template-columns: 1fr 1fr; }
+@media (max-width: 820px){ .panel-grid { grid-template-columns: 1fr; } }
 
 .field { display: grid; gap: 6px; }
 .field > span { color: var(--muted); font-size: 12px; }
@@ -106,49 +116,52 @@ main {
   border-radius: 10px;
   padding: 10px 12px;
   outline: none;
+  font-size: 16px; /* prevents iOS zoom on focus */
 }
 .field input[type="color"] { padding: 0; height: 40px; }
-
-.btn {
-  display: inline-flex; align-items: center; gap: 8px;
-  border: 1px solid var(--border);
-  background: var(--accent);
-  color: white;
-  border-radius: 12px;
-  padding: 10px 14px;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: var(--shadow-1);
-}
-.btn svg { width: 18px; height: 18px; fill: currentColor; }
-.btn.ghost { background: transparent; color: var(--text); }
-.btn.danger { background: var(--danger); border-color: transparent; }
-.btn.danger.outline { background: transparent; color: var(--danger); border-color: var(--danger); }
-
-.creator-form { display: grid; grid-template-columns: 1fr 160px auto; gap: 12px; align-items: end; }
-@media (max-width: 640px) {
-  .creator-form { grid-template-columns: 1fr 1fr; }
-  #cc-add { grid-column: 1 / -1; }
-}
-
 .upload-area {
   border: 1px dashed var(--border);
   border-radius: 12px;
-  background: linear-gradient(180deg, color-mix(in oklab, var(--panel) 92%, transparent), var(--panel));
+  background: var(--elev);
   padding: 14px;
 }
+.upload-area input { font-size: 16px; } /* prevent iOS zoom */
 .upload-area .hint { margin: 8px 0 0; color: var(--muted); font-size: 13px; }
 
-/* Help */
-.device-tag { color: var(--muted); margin: 0 0 4px; }
-.help-list { margin: 0; padding-left: 18px; }
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  border: 1px solid rgba(0,0,0,.12);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.btn svg { width: 18px; height: 18px; fill: currentColor; }
+.btn.ghost { background: transparent; color: var(--text); }
+.btn.danger { background: var(--danger); color: #fff; }
+.btn.danger.outline { background: transparent; color: var(--danger); border-color: var(--danger); }
+
+.toolbar {
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px;
+}
+.action-add  { background: #46c480; color: #0f1222; }
+.action-undo { background: #f5d90a; color: #0f1222; }
+.action-clear{ background: #e5484d; color: #fff; }
+.action-save { background: #4f7cff; color: #fff; }
+.action-theme { /* updated in JS for icon/label and theme color */ }
+.toolbar-spacer { flex: 1 1 20px; }
 
 /* Title */
 .title-wrap {
   position: relative;
   display: grid; align-items: center;
-  padding: 10px 46px;
-  min-height: 56px;
+  padding: 8px 46px;
+  min-height: 52px;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -157,9 +170,10 @@ main {
 .title-edit { position: absolute; left: 8px; top: 8px; }
 #board-title {
   outline: none;
-  min-height: 36px;
+  min-height: 34px;
   line-height: 1.2;
   letter-spacing: 0.2px;
+  font-size: clamp(20px, 2.6vw, 34px); /* slightly smaller */
 }
 #board-title:empty::before { content: attr(data-placeholder); color: var(--muted); }
 
@@ -172,14 +186,11 @@ main {
   align-items: stretch;
 }
 .tier-label {
-  background: var(--elev);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  display: grid;
-  place-items: center;
-  padding: 8px 8px 12px 8px;
   position: relative;
-  overflow: hidden; /* stop any growth */
+  border-radius: 12px;
+  display: grid; place-items: center;
+  padding: 8px 8px 12px 8px;
+  overflow: hidden; /* never grow while editing */
 }
 .tier-letter {
   width: 100%;
@@ -188,123 +199,94 @@ main {
   font-weight: 900;
   letter-spacing: 0.5px;
   line-height: 1;
-  user-select: text;
-  white-space: nowrap; /* keep single line */
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: clip;
-  font-size: 72px; /* start large; JS will clamp */
-}
-.tier-letter[contenteditable="true"] { caret-color: var(--accent); }
-.tier-letter::selection { background: color-mix(in oklab, var(--accent) 32%, transparent); }
-
-/* little edit + delete affordances */
-.tier-hint {
-  position: absolute; bottom: 4px; left: 8px; right: 8px;
-  color: color-mix(in oklab, var(--text) 65%, transparent);
-  font-size: 11px; text-align: center; pointer-events: none;
+  font-size: 72px; /* JS will shrink if needed */
 }
 .tier-del {
   position: absolute; top: 6px; right: 6px;
   width: 22px; height: 22px; border-radius: 999px;
-  border: 1px solid var(--border);
-  background: color-mix(in oklab, var(--danger) 20%, var(--panel));
-  color: var(--text); font-weight: 900; line-height: 1;
+  border: 1px solid rgba(0,0,0,.25);
+  background: rgba(255,255,255,.18);
+  color: #fff; font-weight: 900;
   display: grid; place-items: center; cursor: pointer;
 }
 
+/* Items row */
 .tier-items {
-  background: var(--elev);
+  background: var(--elev);            /* solid; remove any subtle gradients */
   border: 1px dashed var(--border);
   border-radius: 12px;
-  min-height: 92px;
+  min-height: 96px;
   padding: 10px;
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: max-content;
   align-items: center;
-  gap: 10px;
-  overflow-x: auto;
+  gap: 12px;
+  overflow-x: auto;                    /* for long rows (live) */
   scroll-snap-type: x proximity;
 }
 
-/* Circles */
+/* Circles (no strange inner background; pale pastels) */
 .circle {
-  --size: 76px;
-  width: var(--size);
-  height: var(--size);
-  min-width: var(--size);
-  min-height: var(--size);
+  width: var(--circle); height: var(--circle);
+  min-width: var(--circle); min-height: var(--circle);
   border-radius: 999px;
-  border: 2px solid var(--border);
-  background: var(--panel);
+  border: 2px solid color-mix(in oklab, #000 10%, var(--panel));
+  background: var(--panel);           /* actual color set inline per item */
   display: grid; place-items: center;
   position: relative;
   user-select: none;
   touch-action: none;
-  box-shadow: var(--shadow-1);
-  transition: transform .12s ease, box-shadow .12s ease;
+  transition: transform .12s ease;
   scroll-snap-align: start;
 }
-.circle.dragging { transform: scale(1.04); box-shadow: var(--shadow-2); }
+.circle.dragging { transform: scale(1.04); }
 .circle-text {
   font-weight: 900;
   text-align: center;
-  padding: 10px;
   line-height: 1.05;
-  word-break: break-word;
-  color: #fff;
+  color: #000;                        /* black by request */
+  white-space: nowrap;
+  width: 92%;
+  overflow: hidden;
+  text-overflow: clip;
 }
-.circle-img {
-  position: absolute; inset: 0; border-radius: 999px; overflow: hidden;
-}
+.circle-img { position: absolute; inset: 0; border-radius: 999px; overflow: hidden; }
 .circle-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-/* Storage */
+/* Storage grid */
 .storage-grid {
   display: grid; gap: 10px;
-  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
-  min-height: 86px;
+  grid-template-columns: repeat(auto-fill, minmax(var(--circle), 1fr));
+  min-height: calc(var(--circle) + 10px);
 }
 
-/* Toolbar */
-.toolbar {
-  display: flex; flex-wrap: wrap; gap: 10px;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 10px;
+/* Minimal picker (no arc background) */
+#fstm-picker {
+  position: fixed; left: -9999px; top: -9999px;
+  width: 0; height: 0; z-index: 99999; pointer-events: none;
 }
-
-/* Mobile half-radial (smaller + higher contrast) */
-.radial {
-  position: fixed;
-  left: 0; top: 0;
-  transform: translate(-9999px, -9999px);
-  width: 180px; height: 90px; /* smaller half circle */
-  background: transparent;
-  pointer-events: none;
-  z-index: 9999;
-}
-.radial.open { pointer-events: auto; }
-.radial::before {
-  content: "";
-  position: absolute; left: 0; top: 0; right: 0; bottom: 0;
-  border-radius: 90px 90px 0 0;
-  background: color-mix(in oklab, var(--panel) 85%, #000 15%);
-  border: 1px solid var(--border);
-  box-shadow: 0 10px 24px rgba(0,0,0,.45);
-}
-.radial button {
+#fstm-picker.open { pointer-events: auto; }
+#fstm-picker button {
   position: absolute;
-  width: 38px; height: 38px;
+  width: 46px; height: 46px;
   border-radius: 999px;
-  border: 1px solid color-mix(in oklab, var(--text) 40%, transparent);
-  background: color-mix(in oklab, var(--elev) 75%, #000 25%);
-  color: var(--text);
+  border: 1px solid rgba(0,0,0,.18);
+  background: #fff;
+  color: #0f1222;
   font-weight: 900;
-  display: grid; place-items: center;
-  transform: translate(-50%, -50%);
-  cursor: pointer;
+  font-size: 18px;
+  box-shadow: 0 8px 20px rgba(0,0,0,.25);
+  transform: translate(-50%, -50%) scale(.92);
+  opacity: 0;
+  transition: transform 160ms ease, opacity 160ms ease;
+}
+#fstm-picker button.show {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
 }
 
 /* Dialog */
@@ -319,23 +301,9 @@ dialog::backdrop { background: rgba(0,0,0,.5); }
 .confirm-card p { margin: 0 0 12px; color: var(--muted); }
 .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
 
-/* Row color accents on the left label (brighter) */
-.tier-row[data-label="S"] .tier-label { background: color-mix(in oklab, var(--row-S) 45%, var(--elev)); }
-.tier-row[data-label="A"] .tier-label { background: color-mix(in oklab, var(--row-A) 45%, var(--elev)); }
-.tier-row[data-label="B"] .tier-label { background: color-mix(in oklab, var(--row-B) 45%, var(--elev)); }
-.tier-row[data-label="C"] .tier-label { background: color-mix(in oklab, var(--row-C) 45%, var(--elev)); }
-.tier-row[data-label="D"] .tier-label { background: color-mix(in oklab, var(--row-D) 45%, var(--elev)); }
+/* Focus */
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-/* Footer */
-.site-footer { color: var(--muted); text-align: center; }
-
-/* Focus states */
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-/* --- PNG capture helpers --- */
-.capture-mode .tier-items { overflow: visible; }        /* include full row width */
-.capture-mode #radial { visibility: hidden !important; }
-.capture-mode .title-wrap.is-empty { display: none; }   /* hide empty title in capture */
+/* --- Capture tweaks --- */
+.capture-mode .tier-del { display: none !important; } /* don't capture the little × */
+.capture-mode #fstm-picker { display: none !important; }
