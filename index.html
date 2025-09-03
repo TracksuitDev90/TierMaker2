@@ -1,143 +1,121 @@
 <!doctype html>
 <html lang="en" data-theme="dark">
-  <head>
-    <meta charset="utf-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, viewport-fit=cover"
-    />
-    <title>FSTM — Fireside Tier Maker</title>
-    <link rel="stylesheet" href="style.css" />
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Tier Maker</title>
+  <meta name="color-scheme" content="dark light" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <!-- App styles -->
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* Optional: ensure body doesn’t flash unstyled on load */
+    html { background:#0f1115; }
+  </style>
+</head>
+<body>
 
-    <!-- SortableJS: smooth, touch-friendly drag on desktop + iPad + Android -->
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js" defer></script>
-    <!-- html-to-image: consistent PNG capture across devices -->
-    <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.min.js" defer></script>
-    <script src="script.js" defer></script>
-  </head>
-  <body>
-    <header class="site-header" aria-label="Header">
-      <div class="brand">
-        <!-- Icon removed by request -->
-        <strong class="brand-name" aria-label="FSTM brand">FSTM</strong>
-      </div>
-      <!-- Help chip (collapsed by default) -->
-      <details class="help-chip" aria-label="Help">
-        <summary>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10a10 10 0 100-20zm0 4a4 4 0 00-4 4h2a2 2 0 114 0c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5a4 4 0 00-4-4z"/></svg>
-          Help
-        </summary>
-        <div id="help-body" class="help-body"></div>
-      </details>
+  <main class="wrap">
+    <!-- Header / Brand -->
+    <header class="header">
+      <div class="brand">TIER MAKER</div>
     </header>
 
-    <main>
-      <!-- CUSTOM ITEMS -->
-      <section class="panel-group" aria-labelledby="custom-items-heading">
-        <h2 id="custom-items-heading" class="panel-title">CUSTOM ITEMS</h2>
-        <div class="panel-grid">
-          <!-- Circle Creator (ephemeral; not saved across refresh) -->
-          <section class="panel" aria-labelledby="creator-heading">
-            <div class="panel-header">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/></svg>
-              <h3 id="creator-heading">Circle Creator</h3>
-            </div>
-            <form id="circle-creator" class="creator-form" autocomplete="off">
-              <label class="field">
-                <span>Name or emoji</span>
-                <input id="cc-text" type="text" maxlength="40" placeholder="e.g., 🦆 Emma, S-tier, etc." />
-              </label>
-              <label class="field">
-                <span>Circle color</span>
-                <input id="cc-color" type="color" value="#a5d6ff" />
-              </label>
-              <button id="cc-add" class="btn" type="submit" aria-label="Add custom circle">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg>
-                <span>Add to storage</span>
-              </button>
-            </form>
-          </section>
-
-          <!-- Image Upload -->
-          <section class="panel" aria-labelledby="upload-heading">
-            <div class="panel-header">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9l-7-7-7 7h4v4h6V9h4z"/></svg>
-              <h3 id="upload-heading">Image Upload</h3>
-            </div>
-            <div class="upload-area">
-              <input id="file-input" type="file" accept="image/*" multiple />
-              <p class="hint">Drop images or choose files. They’ll become circles.</p>
-            </div>
-          </section>
-        </div>
-      </section>
-
-      <!-- Capture wrapper: title + board -->
-      <section id="capture-area">
-        <!-- Editable Title -->
-        <div class="title-wrap">
-          <button id="title-edit" class="title-edit icon-btn" aria-label="Edit title" title="Edit title">
-            <!-- Pencil icon -->
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM21 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75L21 7.04z"/></svg>
-          </button>
-          <h1 id="board-title" class="editable" contenteditable="false" role="textbox" aria-multiline="true"
-              aria-label="Tier board title" data-placeholder="Add a title…"></h1>
-        </div>
-
-        <!-- Tier Board -->
-        <section id="tier-board" aria-label="Tier board"></section>
-      </section>
-
-      <!-- Toolbar (single row; wraps on phones) -->
-      <section class="toolbar" aria-label="Board actions">
-        <button id="btn-add-tier-2" class="btn action-add">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg>
-          <span>Add a tier</span>
+    <!-- Controls -->
+    <section class="panel">
+      <h2 class="section-title">Controls</h2>
+      <div class="controls">
+        <button id="addTierBtn" class="btn">
+          <span class="ico" aria-hidden="true">
+            <!-- menu / grip -->
+            <svg viewBox="0 0 24 24"><path d="M4 7h16v2H4V7zm0 4h16v2H4v-2zm0 4h16v2H4v-2z"/></svg>
+          </span>
+          Add Tier
         </button>
-        <button id="btn-undo-2" class="btn action-undo" disabled>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5V2L7 7l5 5V8c3.3 0 6 2.7 6 6a6 6 0 0 1-9.7 4.7l-1.2 1.6A8 8 0 0 0 20 14c0-4.4-3.6-8-8-8z"/></svg>
-          <span>Undo</span>
-        </button>
-        <button id="btn-clear-2" class="btn action-clear">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7h12l-1 14H7L6 7zm10.5-4l1 2H6.5l1-2H16.5z"/></svg>
-          <span>Clear board</span>
-        </button>
-        <button id="btn-save-2" class="btn action-save">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20h14v-8h-4v4H9v-4H5v8zM19 9l-7-7-7 7h4v4h6V9h4z"/></svg>
-          <span>Save PNG</span>
-        </button>
-        <div class="toolbar-spacer" aria-hidden="true"></div>
-        <button id="btn-theme-2" class="btn action-theme"></button>
-      </section>
 
-      <!-- Image Storage -->
-      <section class="storage panel" aria-labelledby="storage-title">
-        <div class="panel-header">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/></svg>
-          <h2 id="storage-title">Image Storage</h2>
+        <button id="undoBtn" class="btn" disabled>
+          <span class="ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 5V1L6 7l6 6V9c3.31 0 6 2.69 6 6 0 1.1-.9 2-2 2h-2v2h2a4 4 0 004-4c0-4.42-3.58-8-8-8z"/></svg>
+          </span>
+          Undo
+        </button>
+
+        <button id="trashClear" class="btn">
+          <span class="ico" aria-hidden="true">
+            <!-- requested trash icon (svgrepo-like simplified) -->
+            <svg viewBox="0 0 24 24"><path d="M3 6h18v2H3V6zm3 2h12l-1 13H7L6 8zm4-4h4l1 2H9l1-2z"/></svg>
+          </span>
+          Clear Board
+        </button>
+
+        <button id="themeToggle" class="btn">
+          <span class="ico theme-icon" aria-hidden="true">
+            <!-- swaps via JS -->
+          </span>
+          <span class="theme-text">Light</span>
+        </button>
+
+        <button id="saveBtn" class="btn">
+          <span class="ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM5 4h14v6h-4v4H9v-4H5V4zm6 6h2V6h-2v4z"/></svg>
+          </span>
+          Save PNG
+        </button>
+      </div>
+    </section>
+
+    <!-- Creator (names + images) -->
+    <section class="panel">
+      <h2 class="section-title">Add Names / Images</h2>
+      <div class="creator-grid">
+        <div class="creator-line">
+          <input id="nameInput" class="input" type="text" placeholder="Add a name (e.g., Alex)" />
+          <input id="nameColor" class="color-dot" type="color" value="#FCE38A" aria-label="Token color" />
+          <button id="addNameBtn" class="btn small">Add Name</button>
+          <input id="imageInput" type="file" accept="image/*" multiple class="btn small" aria-label="Add images" />
         </div>
-        <div id="storage-grid" class="storage-grid" role="list" aria-label="Unplaced circles"></div>
-      </section>
-    </main>
+        <div id="helpText" class="help"></div>
+      </div>
+    </section>
 
-    <!-- Clear confirm modal -->
-    <dialog id="confirm-clear">
-      <form method="dialog" class="confirm-card">
-        <h3>Clear the whole board?</h3>
-        <p>This removes all items from tiers and storage. You can also Hard Reset to wipe autosave.</p>
-        <div class="modal-actions">
-          <button value="cancel" class="btn ghost">Cancel</button>
-          <button id="btn-hard-reset" value="hard" class="btn danger outline">Hard Reset</button>
-          <button value="clear" class="btn danger">Clear Board</button>
-        </div>
-      </form>
-    </dialog>
+    <!-- Board -->
+    <section id="boardPanel" class="panel" aria-label="Tier Board">
+      <div class="board-title-wrap">
+        <button type="button" class="title-pen" title="Edit title" aria-label="Edit title">
+          <!-- icon injected in JS -->
+        </button>
+        <h1 class="board-title" contenteditable="true" spellcheck="false"></h1>
+      </div>
 
-    <!-- Minimal mobile picker (rendered dynamically; no background) -->
-    <div id="fstm-picker" aria-hidden="true"></div>
+      <div id="tierBoard" role="list" aria-label="Tiers">
+        <!-- Rows created by JS -->
+      </div>
+    </section>
 
-    <footer class="site-footer" aria-label="Footer">
-      <small>&copy; FSTM</small>
-    </footer>
-  </body>
+    <!-- Image Storage / Tray -->
+    <section class="panel">
+      <h2 class="section-title">Image Storage</h2>
+      <div id="tray" class="dropzone" role="list" aria-label="Image Storage">
+        <!-- tokens appear here -->
+      </div>
+    </section>
+  </main>
+
+  <!-- Radial picker (mobile) -->
+  <div id="radialPicker" class="radial hidden" aria-hidden="true">
+    <div class="radial-options"></div>
+    <button class="radial-close" type="button" aria-label="Close picker">
+      <svg viewBox="0 0 24 24"><path d="M18.3 5.7L12 12l-6.3-6.3-1.4 1.4L10.6 13.4l-6.3 6.3 1.4 1.4L12 14.4l6.3 6.3 1.4-1.4-6.3-6.3 6.3-6.3z"/></svg>
+    </button>
+  </div>
+
+  <!-- SR-only live region (JS will also create if missing) -->
+  <div id="live" class="sr-only" aria-live="polite"></div>
+
+  <!-- Vendor: html2canvas (for PNG export) -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" defer></script>
+
+  <!-- App code -->
+  <script src="app.js" defer></script>
+</body>
 </html>
